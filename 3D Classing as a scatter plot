@@ -1,0 +1,260 @@
+# -*- coding: utf-8 -*-
+"""
+This script plots a 3D Classing as a scatter plot
+"""
+
+from mpl_toolkits.mplot3d import Axes3D
+import matplotlib
+import matplotlib.pyplot as plt
+import pandas as pd
+
+#%matplotlib auto
+
+# load the .csv file into a dataframe
+df = pd.read_csv("data.csv");
+save_plot_filename_3D = 'result_plot_3D_and_2D_projections.png'
+save_plot_filename_per_Class = 'result_plot_2D_projections_per_class.png'
+
+# headers correspond to headers in the .csv file
+x_header = 'DLS'
+y_header = 'SEM'
+z_header = 'PDI'
+color_header = 'Cluster'
+marker_header = 'Size group'
+marker_size_header = 'Cluster distance'
+
+# the marker is defined based on the orientation
+# the marker color is defined based on the Class index
+# the marker size is defined based on the distance from the Class center
+
+# get unique colors
+unique_color_values = df[color_header].unique()
+unique_color_values.sort()                                                      # sort them in the ascending order
+# specify a color map based on which colors will be selected (see: https://matplotlib.org/3.1.0/tutorials/colors/colormaps.html)
+color_map = matplotlib.cm.get_cmap('Dark2')
+#color_map = matplotlib.cm.get_cmap('viridis')
+
+# get unique marker values
+unique_marker_values = df[marker_header].unique()
+unique_marker_values.sort()
+orientation_text = ['$||$', '0', '$\perp$']                               # text for orientation
+# markers
+#markers = ['s', 'o', 'P']
+#marker_edgecolors = ['lawngreen', 'b', 'orange']
+markers = ['$||$', 'o', '$\perp$']                                              # markers
+marker_edgecolors = ['face', 'b', 'face']                                       # outline colors for markers
+marker_linewidth = 2                                                            # linewidth of marker outlines
+marker_alpha = 0.5                                                              # markers opacity
+
+# marker sizes
+min_marker_size_value = df[marker_size_header].min()
+max_marker_size_value = df[marker_size_header].max()
+# add a new column with 
+df['marker_size'] = df[marker_size_header]
+varying_marker_size = True
+if varying_marker_size:
+    # compute the varying marker size
+    df['marker_size'] = abs(1.0 - (df['marker_size'] - min_marker_size_value) / (max_marker_size_value - min_marker_size_value))
+    df['marker_size'] = (4 + df['marker_size'] * 8)**2
+else:
+    # set the constant marker size
+    df['marker_size'] = 10**2 + 0 * df['marker_size']
+
+###############################################################################
+### 3D plot with 2D projections 
+### markers per orientation and colorization per class
+###############################################################################
+
+fig_3D = plt.figure()
+# set the image size in inches
+fig_3D.set_size_inches(10, 8)
+
+# add or not 2D projections
+add_2D_plots = True
+
+if add_2D_plots:
+    if False:
+        # 2x2 subgrid
+        axes_3D = fig_3D.add_subplot(221, projection='3d')
+        axes_2D_yz = fig_3D.add_subplot(222)
+        axes_2D_xy = fig_3D.add_subplot(223)
+        axes_2D_xz = fig_3D.add_subplot(224)
+        legend_bbox_to_anchor = (1, 1)
+    else:
+        # 3d plot and 3 small 2d plots
+        fig_3D.set_size_inches(10, 10)  # set the image size in inches
+        axes_3D    = plt.subplot2grid((4, 3), (0, 0), colspan=3, rowspan=3, projection='3d')
+        axes_2D_xy = plt.subplot2grid((4, 3), (3, 0))
+        axes_2D_xz = plt.subplot2grid((4, 3), (3, 1))
+        axes_2D_yz = plt.subplot2grid((4, 3), (3, 2))
+        legend_bbox_to_anchor = (0.5, 1)
+else:
+    axes_3D = Axes3D(fig_3D) 
+    legend_bbox_to_anchor = (0.5, 1)
+
+legend_string_list = []
+
+for color_id, color_value in enumerate(unique_color_values):
+    # get data points for the current color/Class
+    df_color = df[df[color_header] == color_value]
+    
+    for marker_id, marker_value in enumerate(unique_marker_values):
+        # get data points for the current color/Class
+        df_marker = df_color[df_color[marker_header] == marker_value]
+        
+        # get data points for each orientation
+        df_current = df_marker
+        
+        # scatter plot data points if any
+        if df_current.shape[0] > 0:
+            axes_3D.scatter(df_current[x_header], df_current[y_header], df_current[z_header], 
+                            c = df_current[color_header], vmin = unique_color_values.min(), vmax = unique_color_values.max(), 
+                            marker = markers[marker_id],
+                            s = df_current['marker_size'],
+                            linewidths = marker_linewidth,
+                            edgecolors = marker_edgecolors[marker_id],
+                            cmap = color_map,
+                            alpha = marker_alpha)
+            axes_2D_xy.scatter(df_current[x_header], df_current[y_header], 
+                            c = df_current[color_header], vmin = unique_color_values.min(), vmax = unique_color_values.max(), 
+                            marker = markers[marker_id],
+                            s = df_current['marker_size'],
+                            linewidths = marker_linewidth,
+                            edgecolors = marker_edgecolors[marker_id],
+                            cmap = color_map,
+                            alpha = marker_alpha)
+            axes_2D_xz.scatter(df_current[x_header], df_current[z_header], 
+                            c = df_current[color_header], vmin = unique_color_values.min(), vmax = unique_color_values.max(), 
+                            marker = markers[marker_id],
+                            s = df_current['marker_size'],
+                            linewidths = marker_linewidth,
+                            edgecolors = marker_edgecolors[marker_id],
+                            cmap = color_map,
+                            alpha = marker_alpha)
+            axes_2D_yz.scatter(df_current[y_header], df_current[z_header], 
+                            c = df_current[color_header], vmin = unique_color_values.min(), vmax = unique_color_values.max(), 
+                            marker = markers[marker_id],
+                            s = df_current['marker_size'],
+                            linewidths = marker_linewidth,
+                            edgecolors = marker_edgecolors[marker_id],
+                            cmap = color_map,
+                            alpha = marker_alpha)
+            # populate the legend
+            marker_value_int = int(marker_value)
+            #legend_string_list.append("Class " + str(color_value) + " - orientation " + str(marker_value_int))
+            legend_string_list.append("Class " + str(color_value) + " - orientation " + orientation_text[marker_id])
+
+# add axis labels
+axes_3D.set_xlabel(x_header)
+axes_3D.set_ylabel(y_header)
+axes_3D.set_zlabel(z_header)
+
+axes_2D_xy.set_xlabel(x_header)
+axes_2D_xy.set_ylabel(y_header)
+axes_2D_xz.set_xlabel(x_header)
+axes_2D_xz.set_ylabel(z_header)
+axes_2D_yz.set_xlabel(y_header)
+axes_2D_yz.set_ylabel(z_header)
+
+# add legend and position it outside if the box
+axes_3D.legend(legend_string_list, loc='lower center', bbox_to_anchor=legend_bbox_to_anchor, ncol=4)
+
+if add_2D_plots:
+    plt.tight_layout()
+
+# save the plot
+plt.savefig(save_plot_filename_3D, bbox_inches='tight')
+
+# show the plot
+plt.show()
+
+###############################################################################
+### 2D projections per class
+### markers per orientation and colorization per class
+###############################################################################
+
+fig_per_Class = plt.figure()
+# set the image size in inches
+fig_per_Class.set_size_inches(10, 12)
+
+nrows = unique_color_values.size
+axes_xy = []
+axes_xz = []
+axes_yz = []
+for Class_id, Class in enumerate(unique_color_values):
+    axes_xy.append(plt.subplot2grid((4, 3), (Class_id, 0)))
+    axes_xz.append(plt.subplot2grid((4, 3), (Class_id, 1)))
+    axes_yz.append(plt.subplot2grid((4, 3), (Class_id, 2)))
+
+
+for color_id, color_value in enumerate(unique_color_values):
+    # get data points for the current color/Class
+    df_color = df[df[color_header] == color_value]
+    
+    #legend_string_list = []
+    for marker_id, marker_value in enumerate(unique_marker_values):
+        # get data points for the current color/Class
+        df_marker = df_color[df_color[marker_header] == marker_value]
+        
+        # get data points for each orientation
+        df_current = df_marker
+        
+        # scatter plot data points if any
+        if df_current.shape[0] > 0:
+            title_class = "Class " + str(color_value)
+            #marker_value_int = int(marker_value)
+            #legend_string = "Class " + str(color_value) + " - orientation " + str(marker_value_int)
+            axes_xy[color_id].scatter(df_current[x_header], df_current[y_header], 
+                            c = df_current[color_header], vmin = unique_color_values.min(), vmax = unique_color_values.max(), 
+                            marker = markers[marker_id],
+                            s = df_current['marker_size'],
+                            linewidths = marker_linewidth,
+                            edgecolors = marker_edgecolors[marker_id],
+                            cmap = color_map,
+                            alpha = marker_alpha)
+            axes_xz[color_id].scatter(df_current[x_header], df_current[z_header], 
+                            c = df_current[color_header], vmin = unique_color_values.min(), vmax = unique_color_values.max(), 
+                            marker = markers[marker_id],
+                            s = df_current['marker_size'],
+                            linewidths = marker_linewidth,
+                            edgecolors = marker_edgecolors[marker_id],
+                            cmap = color_map,
+                            alpha = marker_alpha)
+            axes_yz[color_id].scatter(df_current[y_header], df_current[z_header], 
+                            c = df_current[color_header], vmin = unique_color_values.min(), vmax = unique_color_values.max(), 
+                            marker = markers[marker_id],
+                            s = df_current['marker_size'],
+                            linewidths = marker_linewidth,
+                            edgecolors = marker_edgecolors[marker_id],
+                            #label = legend_string,
+                            cmap = color_map,
+                            alpha = marker_alpha)
+            axes_xy[color_id].set_title(title_class)
+            axes_xz[color_id].set_title(title_class)
+            axes_yz[color_id].set_title(title_class)
+            # populate the legend
+            #if legend_string not in legend_string_list:
+            #    legend_string_list.append(legend_string)
+    #axes_xy[color_id].legend(legend_string_list)#, loc='right', bbox_to_anchor=(1.0,0))
+
+for Class_id, Class in enumerate(unique_color_values):
+    axes_xy[Class_id].set_xlabel(x_header)
+    axes_xy[Class_id].set_ylabel(y_header)
+    axes_xz[Class_id].set_xlabel(x_header)
+    axes_xz[Class_id].set_ylabel(z_header)
+    axes_yz[Class_id].set_xlabel(y_header)
+    axes_yz[Class_id].set_ylabel(z_header)
+
+
+# add legend and position it outside if the box
+#lines_labels = [ax.get_legend_handles_labels() for ax in axes_yz]
+#lines, labels = [sum(lol, []) for lol in zip(*lines_labels)]
+#fig_per_Class.legend(lines, labels, loc='upper center', bbox_to_anchor=legend_bbox_to_anchor, ncol=4)
+
+plt.tight_layout()
+
+# save the plot
+plt.savefig(save_plot_filename_per_Class, bbox_inches='tight')
+
+# show the plot
+plt.show()
